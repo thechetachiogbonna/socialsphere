@@ -21,7 +21,8 @@ type INITIALAIACTIONCONTEXTTYPE = {
   stopListening: () => void,
   resetTranscript: () => void,
   lazyMode: boolean,
-  setLazyMode: (mode: boolean) => void
+  setLazyMode: (mode: boolean) => void,
+  stopSpeaking: () => void
 }
 
 const INITIALAIACTION: INITIALAIACTIONCONTEXTTYPE = {
@@ -35,7 +36,8 @@ const INITIALAIACTION: INITIALAIACTIONCONTEXTTYPE = {
   stopListening: () => { },
   resetTranscript: () => { },
   lazyMode: true,
-  setLazyMode: () => { }
+  setLazyMode: () => { },
+  stopSpeaking: () => { }
 }
 
 let isGloballyProcessing = false;
@@ -59,7 +61,76 @@ function AIActionProvider({ children }: { children: ReactNode }) {
     setLazyMode(mode)
   }, [setLazyMode])
 
+  const handleScroll = useCallback((action: string, amountPercent?: number) => {
+    const scrollArea = document.getElementById("main-scroll-area");
+    const amount = (scrollArea?.clientHeight || window.innerHeight) * (amountPercent || 0.8);
+
+    if (scrollArea) {
+      switch (action) {
+        case "scroll_up":
+          scrollArea.scrollTop -= amount;
+          break;
+        case "scroll_down":
+          scrollArea.scrollTop += amount;
+          break;
+        case "scroll_to_top":
+          scrollArea.scrollTop = 0;
+          break;
+        case "scroll_to_bottom":
+          scrollArea.scrollTop = scrollArea.scrollHeight;
+          break;
+      }
+    } else {
+      // Global fallback
+      window.scrollBy({ top: action.includes("up") ? -amount : amount, behavior: "smooth" });
+    }
+  }, []);
+
+  const resetTranscriptRef = useRef<() => void>(() => { });
+
+  const speak = useCallback((text: string) => {
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = "en-US";
+
+      aiIsSpeakingRef.current = true;
+      SpeechRecognition.stopListening()
+
+      async function simulateSpeech(text: string, delay = 380) {
+        const words = `Speaking this text: ${text}`.split(" ");
+        for (let i = 0; i < words.length; i++) {
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+
+        if (aiIsSpeakingRef.current) {
+          aiIsSpeakingRef.current = false;
+          if (lazyMode) {
+            SpeechRecognition.startListening({ continuous: true, language: "en-US" });
+          } else {
+            resetTranscriptRef.current();
+          }
+        }
+      }
+
+      // sometimes the web speech doesn't trigger the onend event, so we simulate it
+      simulateSpeech(text);
+
+      speechSynthesis.speak(utterance);
+
+      utterance.onend = () => {
+        aiIsSpeakingRef.current = false;
+        if (lazyMode) {
+          SpeechRecognition.startListening({ continuous: true, language: "en-US" });
+        } else {
+          resetTranscriptRef.current();
+        }
+      };
+
+    }
+  }, [lazyMode]);
+
   const { transcript, listening, resetTranscript } = useSpeechRecognition();
+  resetTranscriptRef.current = resetTranscript;
 
   const { currentUser } = useCurrentUserStore();
   const {
@@ -78,49 +149,21 @@ function AIActionProvider({ children }: { children: ReactNode }) {
   const handleComment = useMutation(api.post.comment);
   const handleDeletePost = useMutation(api.post.deletePost)
 
+  const stopSpeaking = useCallback(() => {
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+      aiIsSpeakingRef.current = false;
+
+      if (lazyMode) {
+        SpeechRecognition.startListening({ continuous: true, language: "en-US" });
+      } else {
+        resetTranscriptRef.current();
+      }
+    }
+  }, [lazyMode]);
+
   const runAI = useCallback(
     async (textInput: string) => {
-      const speak = (text: string) => {
-        if (typeof window !== "undefined" && "speechSynthesis" in window) {
-          const utterance = new SpeechSynthesisUtterance(text);
-          utterance.lang = "en-US";
-
-          aiIsSpeakingRef.current = true;
-          SpeechRecognition.stopListening()
-
-          async function simulateSpeech(text: string, delay = 380) {
-            const words = `Speaking this text: ${text}`.split(" ");
-            for (let i = 0; i < words.length; i++) {
-              await new Promise(resolve => setTimeout(resolve, delay));
-            }
-
-            if (aiIsSpeakingRef.current) {
-              aiIsSpeakingRef.current = false;
-              if (lazyMode) {
-                SpeechRecognition.startListening({ continuous: true, language: "en-US" });
-              } else {
-                resetTranscript();
-              }
-            }
-          }
-
-          // sometimes the web speech doesn't trigger the onend event, so we simulate it
-          simulateSpeech(text);
-
-          speechSynthesis.speak(utterance);
-
-          utterance.onend = () => {
-            aiIsSpeakingRef.current = false;
-            if (lazyMode) {
-              SpeechRecognition.startListening({ continuous: true, language: "en-US" });
-            } else {
-              resetTranscript();
-            }
-          };
-
-        }
-      }
-
       const getImage = async (prompt: string) => {
         setImageGenerationError(null)
 
@@ -338,12 +381,19 @@ function AIActionProvider({ children }: { children: ReactNode }) {
           }
         }
 
+        if (["scroll_up", "scroll_down", "scroll_to_top", "scroll_to_bottom"].includes(parsed.action)) {
+          const scrollAmount = "amount" in parsed ? (parsed as any).amount : undefined;
+          handleScroll(parsed.action, scrollAmount);
+        }
+
         if ("response" in parsed) {
           if (parsed.action === "delete_post" && currentUser?._id !== currentViewingPost.ownerId) {
             return speak("This post does not belong to you, you cannot delete it.");
           }
 
-          speak(parsed.response);
+          if (!["scroll_up", "scroll_down", "scroll_to_top", "scroll_to_bottom"].includes(parsed.action)) {
+            speak(parsed.response);
+          }
         }
 
         setLastResponse(parsed);
@@ -365,7 +415,7 @@ function AIActionProvider({ children }: { children: ReactNode }) {
         }, 1000);
       }
     },
-    [pathname, router, toggleLikeMutation, toggleSaveMutation, handleComment, handleDeletePost, currentUser, post, setPost, lastResponse, lazyMode, currentViewingPost, loading, setIsGeneratingImage, setImageFile, setImageUrl, setImagePrompt, resetTranscript]
+    [pathname, router, toggleLikeMutation, toggleSaveMutation, handleComment, handleDeletePost, currentUser, post, setPost, lastResponse, lazyMode, currentViewingPost, loading, setIsGeneratingImage, setImageFile, setImageUrl, setImagePrompt, resetTranscript, handleScroll, speak]
   );
 
   const startListening = () =>
@@ -416,7 +466,8 @@ function AIActionProvider({ children }: { children: ReactNode }) {
         stopListening,
         resetTranscript,
         lazyMode,
-        setLazyMode
+        setLazyMode,
+        stopSpeaking
       }}
     >
       {children}

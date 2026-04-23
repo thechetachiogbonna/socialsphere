@@ -56,14 +56,16 @@ export async function talkToAI(userInput: string, currentPage: string, lastRespo
     - If an action is not valid on the current page, output {"action":"unsupported","message":"...","response":"..." (should be in past tense)}.
   
     --- Page Rules ---
-    Home: navigate, like_post, unlike_post, save_post, unsave_post, delete_post, comment  
-    Create-post: create_post, navigate  
-    Edit-post: edit_post, delete_post, navigate  
-    Post-details: like_post, unlike_post, save_post, unsave_post, comment, delete_post, navigate  
-    Bookmarks: unsave_post, navigate  
-    Profile: delete_post, navigate  
-    People: search, navigate  
-    Search: search, navigate 
+    Home: navigate, like_post, unlike_post, save_post, unsave_post, delete_post, comment, scroll_up, scroll_down, scroll_to_top, scroll_to_bottom  
+    Create-post: create_post, navigate, scroll_up, scroll_down, scroll_to_top, scroll_to_bottom  
+    Edit-post: edit_post, delete_post, navigate, scroll_up, scroll_down, scroll_to_top, scroll_to_bottom  
+    Post-details: like_post, unlike_post, save_post, unsave_post, comment, delete_post, navigate, scroll_up, scroll_down, scroll_to_top, scroll_to_bottom  
+    Bookmarks: unsave_post, navigate, scroll_up, scroll_down, scroll_to_top, scroll_to_bottom  
+    Profile: delete_post, navigate, scroll_up, scroll_down, scroll_to_top, scroll_to_bottom  
+    People: search, navigate, scroll_up, scroll_down, scroll_to_top, scroll_to_bottom  
+    Search: search, navigate, scroll_up, scroll_down, scroll_to_top, scroll_to_bottom 
+  
+    NOTE: Scrolling actions (scroll_up, scroll_down, scroll_to_top, scroll_to_bottom) should be triggered by natural phrases like "go up", "move down", "next", "previous", "top of the page", "bottom of the page", etc., even if the word "scroll" is not used.
   
     --- JSON Schemas:
   
@@ -129,7 +131,13 @@ export async function talkToAI(userInput: string, currentPage: string, lastRespo
     9) Navigate
     { "action": "navigate", "destination": "/ (as home)|create-post|edit-post|bookmarks|people|search|profile|post-details", "response": "Natural response of action done about navigation" }
   
-    10) Unknown/Unsupported
+    10) Scroll
+    { "action": "scroll_up", "amount": "Optional - percentage of screen height to scroll", "response": "Natural response of action done" }
+    { "action": "scroll_down", "amount": "Optional - percentage of screen height to scroll", "response": "Natural response of action done" }
+    { "action": "scroll_to_top", "response": "Natural response of action done" }
+    { "action": "scroll_to_bottom", "response": "Natural response of action done" }
+
+    11) Unknown/Unsupported
     { "action": "unsupported", "message": "Explanation why unsupported", "response": "Natural response explaining why the action can’t be done" }
   
     --- End schemas.  

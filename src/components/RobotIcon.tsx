@@ -8,9 +8,14 @@ import { useAIAction } from "@/context/AIAction";
 
 export default function RobotIcon() {
   const pathname = usePathname()
-  const { runAI, startListening, stopListening, transcript, listening, loading, aiIsSpeaking, resetTranscript, lazyMode } = useAIAction();
+  const { runAI, startListening, stopListening, transcript, listening, loading, aiIsSpeaking, resetTranscript, lazyMode, stopSpeaking } = useAIAction();
 
   const handleClick = () => {
+    if (aiIsSpeaking) {
+      stopSpeaking();
+      return;
+    }
+
     if (transcript || listening) {
       stopListening();
       runAI(transcript);
@@ -33,7 +38,7 @@ export default function RobotIcon() {
         animate={listening || aiIsSpeaking ? { y: [0, -3, 0] } : { y: 0 }}
         transition={{ repeat: listening || aiIsSpeaking ? Infinity : 0, duration: 1 }}
         className={`${pathname === "/" ? "p-1" : "p-5"} rounded-full bg-[#1A1A1A] cursor-pointer ${glow} transition-all relative ${((pathname === "/" && (listening || transcript)) || (!lazyMode && transcript)) ? "z-1000" : "z-20"}`}
-        disabled={loading || aiIsSpeaking}
+        disabled={loading}
       >
         <Bot className={cn("", pathname === "/" ? "w-6 h-6" : "w-8 h-8")} />
 

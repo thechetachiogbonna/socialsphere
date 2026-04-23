@@ -69,4 +69,8 @@ export type AIResponse =
   }
   | { action: "search"; query: string; response: string }
   | { action: "navigate"; destination: string; response: string }
+  | { action: "scroll_up"; amount?: number; response: string }
+  | { action: "scroll_down"; amount?: number; response: string }
+  | { action: "scroll_to_top"; response: string }
+  | { action: "scroll_to_bottom"; response: string }
   | { action: "unsupported"; message: string; response: string };
