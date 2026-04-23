@@ -176,6 +176,8 @@ function AIActionProvider({ children }: { children: ReactNode }) {
         const raw = await res.json();
         const parsed: AIResponse = JSON.parse(raw);
 
+        console.log("AI response:", parsed);
+
         if (!currentViewingPost) return parsed;
 
         if ((pathname === "/" || pathname.startsWith("/post-details/")) && ["navigate", "like_post", "unlike_post", "save_post", "unsave_post", "comment"].includes(parsed.action)) {
