@@ -10,11 +10,11 @@ export async function POST(req: NextRequest) {
     if (evt.type === "user.created") {
       await convex.mutation(api.user.createUser, {
         clerk_userId: evt.data.id!,
-        first_name: evt.data.first_name!,
-        last_name: evt.data.last_name!,
-        username: evt.data.username!,
-        email: evt.data.email_addresses[0].email_address,
-        profile_pic: evt.data.image_url
+        first_name: evt.data.first_name ?? "",
+        last_name: evt.data.last_name ?? "",
+        username: evt.data.username ?? "",
+        email: evt.data.email_addresses[0]?.email_address ?? "",
+        profile_pic: evt.data.image_url ?? "",
       });
 
       return NextResponse.json({ status: "success" }, { status: 200 });
@@ -29,13 +29,17 @@ export async function POST(req: NextRequest) {
     }
 
     if (evt.type === "user.updated") {
+      const existingUser = await convex.query(api.user.getUserByClerkId, {
+        clerk_userId: evt.data.id!,
+      });
+
       await convex.mutation(api.user.updateUser, {
         clerk_userId: evt.data.id!,
-        first_name: evt.data.first_name!,
-        last_name: evt.data.last_name!,
-        username: evt.data.username!,
-        email: evt.data.email_addresses[0].email_address,
-        profile_pic: evt.data.image_url!
+        first_name: evt.data.first_name ?? existingUser?.first_name ?? "",
+        last_name: evt.data.last_name ?? existingUser?.last_name ?? "",
+        username: evt.data.username ?? existingUser?.username ?? "",
+        email: evt.data.email_addresses[0]?.email_address ?? existingUser?.email ?? "",
+        profile_pic: evt.data.image_url ?? existingUser?.profile_pic ?? "",
       });
       return NextResponse.json({ status: "success" }, { status: 200 });
     }
