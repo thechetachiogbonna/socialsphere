@@ -9,6 +9,7 @@ import { Id } from "../../convex/_generated/dataModel";
 import useCurrentUserStore from "@/stores/useCurrentUserStore";
 import { toast } from "sonner";
 import { generateImage } from "@/actions/ai";
+import VoiceUI from "@/components/VoiceUI";
 
 type INITIALAIACTIONCONTEXTTYPE = {
   runAI: (textInput: string) => Promise<void | AIResponse>
@@ -216,8 +217,7 @@ function AIActionProvider({ children }: { children: ReactNode }) {
           body: JSON.stringify({ input: textInput, currentPage: pathname, lastResponse }),
         });
 
-        const raw = await res.json();
-        const parsed: AIResponse = JSON.parse(raw);
+        const parsed = (await res.json()) as AIResponse;
 
         console.log("AI response:", parsed);
 
@@ -471,6 +471,7 @@ function AIActionProvider({ children }: { children: ReactNode }) {
       }}
     >
       {children}
+      {/* <VoiceUI /> */}
     </AIAction.Provider>
   )
 }

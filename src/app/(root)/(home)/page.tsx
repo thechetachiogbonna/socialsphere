@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { FileText } from 'lucide-react';
 import HomeSkeleton from '@/components/skeletons/HomeSkeleton';
+import VoiceUI from '@/components/VoiceUI';
 
 function Home() {
   const posts = useQuery(api.post.getAllPosts)
@@ -69,6 +70,9 @@ function Home() {
   return (
     <section className="flex justify-center items-center pb-36 md:pb-20">
       <div className="flex flex-col gap-10 w-[500px]">
+
+        <VoiceUI />
+
         {posts?.map((post, i) => {
           return (
             <PostCard
